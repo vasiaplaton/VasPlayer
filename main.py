@@ -143,7 +143,6 @@ class UI:
             for language in languages:
                 self.tracksList.insert(END, language)
 
-
     def loop_start(self):
         self.root.mainloop()
 
