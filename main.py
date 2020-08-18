@@ -14,6 +14,7 @@ class UI:
     default_bg = "#ad4500"
     height_w = 750
     width_w = 700
+    num_track = 0
 
     def __init__(self):
         # window constructor
@@ -33,7 +34,8 @@ class UI:
         albums_label.pack(side=TOP)
         # listbox create
         self.albumsList = Listbox(albums_colon, selectmode=SINGLE, bg=self.background, width=0, borderwidth=0,
-                                  highlightthickness=0, fg="#dddddd", selectbackground=self.active_bg, font=("Menlo", 14))
+                                  highlightthickness=0, fg="#dddddd", selectbackground=self.active_bg,
+                                  font=("Menlo", 13), exportselection=False)
         self.albumsList.pack(side=LEFT, fill=Y)
         # scroll create
         albums_scroll = Scrollbar(albums_colon, command=self.albumsList.yview, bg=self.default_bg, bd=0, relief=FLAT,
@@ -44,13 +46,13 @@ class UI:
         # debug insert test elements
         for i in range(4):
             for language in languages:
-                if len(language) > 16:
-                    language = language[0:15]
+                if len(language) > 21:
+                    language = language[0:20]
                     language += "..."
                 self.albumsList.insert(END, language)
 
         # controls
-        controls_box = Frame(self.root, bg=self.background, bd=0, padx = 5)
+        controls_box = Frame(self.root, bg=self.background, bd=0, padx=5)
         controls_box.pack(side=TOP, fill=X)
         # label_debug = Label(controls_box, text="Top controls", font=("Menlo", 16), fg="#dddddd", bg=self.background)
         # label_debug.pack(side=TOP)
@@ -77,6 +79,9 @@ class UI:
 
         def play_pause():
             play_b.config(image=pause)
+            self.set_track(4)
+            self._set_album(4)
+            self.root.focus_set()
 
         def next_track():
             pass
@@ -103,8 +108,8 @@ class UI:
         names = Frame(controls_box, bg=self.background)
         names.pack(fill=X)
 
-        time = Label(names, text="0:00", font=("Menlo", 12), fg="#dddddd", bg=self.background)
-        time.pack(side=LEFT)
+        time_now = Label(names, text="0:00", font=("Menlo", 12), fg="#dddddd", bg=self.background)
+        time_now.pack(side=LEFT)
 
         time_end = Label(names, text="3:10", font=("Menlo", 12), fg="#dddddd", bg=self.background)
         time_end.pack(side=RIGHT)
@@ -123,18 +128,17 @@ class UI:
 
         # tracks
         tracks_colon = Frame(self.root, bg=self.background)
-        label_debug1 = Label(tracks_colon, text="Tracks", font=("Menlo", 16, "bold"), fg="#dddddd", bg=self.background)
-        label_debug1.pack(side=TOP)
+        Label(self.root, text="Tracks", font=("Menlo", 16, "bold"), fg="#dddddd", bg=self.background).pack(side=TOP)
         # tracks constructor
         # listbox create
         self.tracksList = Listbox(tracks_colon, selectmode=SINGLE, bg=self.background, width=0, borderwidth=0,
                                   highlightthickness=0, fg="#dddddd", selectbackground=self.active_bg,
-                                  font=("Menlo", 14))
+                                  font=("Menlo", 14), exportselection=False)
         # scroll create
         tracks_scroll = Scrollbar(self.root, command=self.tracksList.yview, bg=self.default_bg, bd=0, relief=FLAT,
                                   troughcolor=self.background, activebackground=self.active_bg)
-        tracks_scroll.pack(side=RIGHT, fill=Y, pady=5, padx=5)
-        tracks_colon.pack(side=LEFT, fill=BOTH)
+        tracks_scroll.pack(side=RIGHT, fill=Y, padx=5, pady=5)
+        tracks_colon.pack(side=LEFT, fill=BOTH, padx=15, pady=5)
         self.tracksList.pack(side=LEFT, fill=BOTH)
         # connect scroll to list
         self.tracksList.config(yscrollcommand=tracks_scroll.set)
@@ -145,6 +149,23 @@ class UI:
 
     def loop_start(self):
         self.root.mainloop()
+
+    def set_track(self, index):
+        self.tracksList.select_clear(0, "end")
+        self.tracksList.selection_set(index)
+        self.tracksList.see(index)
+        self.tracksList.activate(index)
+        self.tracksList.selection_anchor(index)
+        self.num_track = index
+
+    def _set_album(self, index):
+        self.albumsList.select_clear(0, "end")
+        self.albumsList.selection_set(index)
+        self.albumsList.see(index)
+        self.albumsList.activate(index)
+        self.albumsList.selection_anchor(index)
+        self.albumsList = index
+
 
 
 class MusicPlayer:
