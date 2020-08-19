@@ -2,7 +2,7 @@ from tkinter import *
 from PIL import Image, ImageTk
 import vlc
 import os
-import time, threading
+import threading
 
 path = "."
 setting0 = ["Музыка Василия Платона"]
@@ -11,6 +11,7 @@ big_font = 16
 album_font = 13
 med_font = 14
 small_font = 12
+
 
 class UI:
     background = "#2b2b2b"
@@ -54,7 +55,8 @@ class UI:
         albums_colon = Frame(self.root, bg=self.background)
         albums_colon.pack(side=LEFT, fill=Y)
         # albums colon Label
-        albums_label = Label(albums_colon, text="Albums", font=(font_name, big_font, "bold"), fg="#dddddd", bg=self.background)
+        albums_label = Label(albums_colon, text="Albums", font=(font_name, big_font, "bold"), fg="#dddddd",
+                             bg=self.background)
         albums_label.pack(side=TOP)
         # listbox create
         self.albumsList = Listbox(albums_colon, selectmode=SINGLE, bg=self.background, width=23, borderwidth=0,
@@ -71,8 +73,6 @@ class UI:
         # controls
         controls_box = Frame(self.root, bg=self.background, bd=0, padx=5)
         controls_box.pack(side=TOP, fill=X)
-        # label_debug = Label(controls_box, text="Top controls", font=(font_name, big_font), fg="#dddddd", bg=self.background)
-        # label_debug.pack(side=TOP)
         # icons
         # play
         k_resize = 1.7
@@ -118,7 +118,8 @@ class UI:
         self.time_end = Label(names, text="3:10", font=(font_name, small_font), fg="#dddddd", bg=self.background)
         self.time_end.pack(side=RIGHT)
 
-        self.track_name = Label(names, text="Track", font=(font_name, med_font, "bold"), fg="#dddddd", bg=self.background)
+        self.track_name = Label(names, text="Track", font=(font_name, med_font, "bold"), fg="#dddddd",
+                                bg=self.background)
         self.author_name = Label(names, text="Author", font=(font_name, small_font), fg="#dddddd", bg=self.background)
         self.track_name.pack(side=TOP)
         self.author_name.pack(side=TOP)
@@ -133,7 +134,8 @@ class UI:
 
         # tracks
         tracks_colon = Frame(self.root, bg=self.background)
-        Label(self.root, text="Tracks", font=(font_name, big_font, "bold"), fg="#dddddd", bg=self.background).pack(side=TOP)
+        Label(self.root, text="Tracks", font=(font_name, big_font, "bold"), fg="#dddddd",
+              bg=self.background).pack(side=TOP)
         # tracks constructor
         # listbox create
         self.tracksList = Listbox(tracks_colon, selectmode=SINGLE, bg=self.background, width=0, borderwidth=0,
