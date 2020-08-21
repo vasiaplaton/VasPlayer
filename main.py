@@ -5,8 +5,10 @@ from PIL import Image, ImageTk
 import vlc
 import os
 import threading
+import random as random_module
+from pynput.keyboard import Listener
 
-path = "."
+_path = "."
 setting0 = ["Музыка Василия Платона"]
 font_name = "Menlo"
 big_font = 16
@@ -33,17 +35,19 @@ class UI:
             self.myOS.play_pause()
 
         def next_track():
-            self.myOS.next_track(repeat=0, random=self.random)
+            self.myOS.next_track(repeat=0)
 
         def prev_track():
-            self.myOS.prev_track(repeat=0, random=self.random)
+            self.myOS.prev_track(repeat=0)
 
         def random():
             self.random = not self.random
             if self.random:
                 self.set_button_image(self.random_b, self.random_a)
+                self.myOS.random_shuffle()
             else:
                 self.set_button_image(self.random_b, self.random_i)
+                self.myOS.random_unshuffle()
 
         def repeat():
             self.repeat = not self.repeat
@@ -61,6 +65,8 @@ class UI:
             track = self.tracksList.curselection()[0]
             self.track_changed(track)
             myOS.play(track)
+            if self.random:
+                self.myOS.random_shuffle()
 
         def slider_motion(_event):
             pos = self.slide.get()
@@ -240,10 +246,10 @@ class UI:
             self.set_button_image(self.play_b, self.pause_i)
         self.time_now.configure(text=self.myOS.get_time())
         self.slide.set(self.myOS.get_percent_pos())
-        self.myOS.sequencer(random=self.random, repeat=self.repeat)
-        if self.myOS.track_changed:
-            self.track_changed(self.myOS.index)
-            self._set_track(self.myOS.index)
+        self.myOS.sequencer(repeat=self.repeat)
+        if self.myOS.track_changed():
+            self.track_changed(self.myOS.get_index())
+            self._set_track(self.myOS.get_index())
         # start timer
         threading.Timer(0.1, self.timer).start()
 
@@ -312,40 +318,43 @@ class UI:
 
 
 class OS:
-    path = ""
-    dirs = [""]
-    tracks = [""]
-    album = ""
-    random = False
-    repeat = False
-    index = 0
-    track_changed = False
+    _path = ""
+    _dirs = []
+    _tracks = []
+    _tracks_index = []
+    _album = ""
+    _random = False
+    _index = 0
+    _track_changed_bool = False
 
     def __init__(self, path_d):
         self.path = path_d
         self.player = vlc.MediaPlayer()
+        listener_thread = Listener(on_press=self._on_media_keys, on_release=None)
+        # This is a daemon=True thread, use .join() to prevent code from exiting
+        listener_thread.start()
 
     def get_dirs(self):
-        self.dirs = []
+        self._dirs = []
         for directory in os.listdir(self.path):
             if os.path.isdir(os.path.join(self.path, directory)) and directory[0] != '.':
-                self.dirs.append(directory)
-        return self.dirs
+                self._dirs.append(directory)
+        return self._dirs
 
     def set_album(self, album_num=0):
-        self.tracks = []
-        self.album = self.dirs[album_num]
-        path_d = os.path.join(self.path, self.dirs[album_num])
+        self._tracks = []
+        self._album = self._dirs[album_num]
+        path_d = os.path.join(self.path, self._dirs[album_num])
         for track in os.listdir(path_d):
             if self._get_ext(track) == "mp3":
-                self.tracks.append(track)
-        self.tracks.sort(key=self._get_num)
+                self._tracks.append(track)
+        self._tracks.sort(key=self._get_num)
         for album in setting0:
-            if self.album == album:
-                self.tracks.reverse()
+            if self._album == album:
+                self._tracks.reverse()
 
     def get_tracks(self):
-        return self.tracks
+        return self._tracks
 
     @staticmethod
     def _get_ext(string):
@@ -370,7 +379,7 @@ class OS:
         return num
 
     def get_name(self, index):
-        string = self.tracks[index]
+        string = self._tracks[index]
         start = 0
         stop = 0
         for i in range(len(string)):
@@ -393,7 +402,7 @@ class OS:
         return name[0: start-1], name[start+2: len(name)]
 
     def get_length(self, track=0):
-        path_t = os.path.join(self.path, self.album, self.tracks[track])
+        path_t = os.path.join(self.path, self._album, self._tracks[track])
         media = vlc.Media(path_t)
         media.parse()
         duration = media.get_duration()
@@ -409,11 +418,11 @@ class OS:
         return string
 
     def play(self, index):
-        path_t = os.path.join(self.path, self.album, self.tracks[index])
+        path_t = os.path.join(self.path, self._album, self._tracks[index])
         media = vlc.Media(path_t)
         self.player.set_media(media)
         self.player.play()
-        self.index = index
+        self._index = index
 
     def play_pause(self):
         self.player.pause()
@@ -427,33 +436,71 @@ class OS:
     def get_percent_pos(self):
         return self.player.get_position()*1000
 
-    def sequencer(self, random, repeat):
+    def sequencer(self, repeat):
         if self.player.can_pause() and (not self.player.is_playing()) and (not self.player.will_play()):
-            self.next_track(repeat=repeat, random=random)
+            self.next_track(repeat=repeat)
 
-    def next_track(self, random, repeat):
-        if repeat:
-            self.set_pos(0)
-            self.play(self.index)
-        else:
-            self.index += 1
-            if self.index >= len(self.tracks):
-                self.index = 0
-            self.track_changed = True
-            self.set_pos(0)
-            self.play(self.index)
+    def next_track(self, repeat):
+        if not repeat:
+            if not self._random:
+                self._index += 1
+                if self._index >= len(self._tracks):
+                    self._index = 0
+            else:
+                self._shift(self._tracks_index, -1)
+                self._index = self._tracks_index[0]
+        self.change_track()
 
-    def prev_track(self, random, repeat):
-        if repeat:
-            self.set_pos(0)
-            self.play(self.index)
+    def prev_track(self, repeat):
+        if not repeat:
+            if not self._random:
+                self._index -= 1
+                if self._index <= 0:
+                    self._index = len(self._tracks)
+            else:
+                self._shift(self._tracks_index, 1)
+                self._index = self._tracks_index[0]
+        self.change_track()
+
+    def change_track(self):
+        self._track_changed_bool = True
+        self.set_pos(0)
+        self.play(self._index)
+
+    def track_changed(self):
+        state = self._track_changed_bool
+        self._track_changed_bool = False
+        return state
+
+    def _on_media_keys(self, key):
+        if str(key) == '<269025047>':
+            self.next_track(repeat=0)
+        if str(key) == '<269025046>':
+            self.prev_track(repeat=0)
+        if str(key) == '<269025044>' or str(key) == '<269025043>':
+            self.play_pause()
+
+    def random_shuffle(self):
+        self._random = True
+        self._tracks_index = list(range(len(self._tracks)-1))
+        random_module.shuffle(self._tracks_index)
+        self._tracks_index.insert(0, self._index)
+
+    def random_unshuffle(self):
+        self._random = False
+
+    def get_index(self):
+        return self._index
+
+    @staticmethod
+    def _shift(lst, steps):
+        if steps < 0:
+            steps = abs(steps)
+            for i in range(steps):
+                lst.append(lst.pop(0))
         else:
-            self.index -= 1
-            if self.index <= 0:
-                self.index = len(self.tracks)
-            self.track_changed = True
-            self.set_pos(0)
-            self.play(self.index)
+            for i in range(steps):
+                lst.insert(0, lst.pop())
 
 
 myOS = OS("/media/vasia/HDD1TB/music1")
