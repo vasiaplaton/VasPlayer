@@ -75,6 +75,12 @@ class UI:
             else:
                 self.myOS.set_pos(999 / 1000)
 
+        def in_label(event):
+            text = self.search.get() + event.char
+            self.myOS.find(text)
+            self.update_tracks()
+            print(text)
+
         # window constructor
         self.root = Tk()
         self.root.geometry('700x750')
@@ -138,6 +144,10 @@ class UI:
         image = Image.open("repeat_inactive.png")
         image = image.resize((int(image.width / k_resize_1), int(image.height / k_resize_1)), Image.ANTIALIAS)
         self.repeat_i = ImageTk.PhotoImage(image)
+        # search
+        image = Image.open("search.png")
+        image = image.resize((int(image.width / 1.6), int(image.height / 1.6)), Image.ANTIALIAS)
+        search_i = ImageTk.PhotoImage(image)
         # buttons
         # play/pause
         self.play_b = Button(controls_box, image=self.play_i, activebackground=self.background,
@@ -171,7 +181,7 @@ class UI:
         self.time_now = Label(names, text="0:00", font=(font_name, small_font), fg="#dddddd", bg=self.background)
         self.time_now.pack(side=LEFT)
 
-        self.time_end = Label(names, text="3:10", font=(font_name, small_font), fg="#dddddd", bg=self.background)
+        self.time_end = Label(names, text="0:00", font=(font_name, small_font), fg="#dddddd", bg=self.background)
         self.time_end.pack(side=RIGHT)
 
         self.track_name = Label(names, text="Track", font=(font_name, med_font, "bold"), fg="#dddddd",
@@ -187,6 +197,20 @@ class UI:
         self.slide['to'] = 1000
         self.slide['from'] = 0
         self.slide.pack(side=TOP, fill=X)
+
+        # search
+        search_row = Frame(self.root, bg="#363636")
+        search_row.pack(side=TOP, fill=X, pady=10, padx=10)
+        search_icon = Label(search_row, image=search_i, bg="#363636")
+        search_icon.image = search_i
+        search_icon.pack(side=LEFT)
+        self.search = Entry(search_row, bg="#363636", width=40, borderwidth=0,
+                            highlightthickness=0, fg="#dddddd", selectbackground=self.active_bg,
+                            font=(font_name, 12))
+        # self.search.delete(0, END)
+        # self.search.insert(0, "search something")
+        self.search.pack(side=LEFT, fill=X, padx=10)
+        self.search.bind('<Key>', in_label)
 
         # tracks
         tracks_colon = Frame(self.root, bg=self.background)
@@ -501,6 +525,17 @@ class OS:
         else:
             for i in range(steps):
                 lst.insert(0, lst.pop())
+
+    def find(self, string):
+        self._tracks = []
+        path_d = os.path.join(self.path, self._album)
+        for track in os.listdir(path_d):
+            if self._get_ext(track) == "mp3" and ((track.find(string) != -1) or string.isspace()):
+                self._tracks.append(track)
+        self._tracks.sort(key=self._get_num)
+        for album in setting0:
+            if self._album == album:
+                self._tracks.reverse()
 
 
 myOS = OS("/media/vasia/HDD1TB/music1")
