@@ -1,4 +1,6 @@
 from tkinter import *
+from tkinter import Button
+
 from PIL import Image, ImageTk
 import vlc
 import os
@@ -20,6 +22,8 @@ class UI:
     height_w = 750
     width_w = 700
     num_track = 0
+    random = False
+    repeat = False
 
     def __init__(self, os_get):
         self.myOS = os_get
@@ -29,10 +33,24 @@ class UI:
             self.myOS.play_pause()
 
         def next_track():
-            pass
+            self.myOS.next_track(repeat=0, random=self.random)
 
         def prev_track():
-            pass
+            self.myOS.prev_track(repeat=0, random=self.random)
+
+        def random():
+            self.random = not self.random
+            if self.random:
+                self.set_button_image(self.random_b, self.random_a)
+            else:
+                self.set_button_image(self.random_b, self.random_i)
+
+        def repeat():
+            self.repeat = not self.repeat
+            if self.repeat:
+                self.set_button_image(self.repeat_b, self.repeat_a)
+            else:
+                self.set_button_image(self.repeat_b, self.repeat_i)
 
         def on_album_change(_event):
             album = self.albumsList.curselection()[0]
@@ -45,7 +63,11 @@ class UI:
             myOS.play(track)
 
         def slider_motion(_event):
-            self.myOS.set_pos(self.slide.get()/100)
+            pos = self.slide.get()
+            if pos < 1000:
+                self.myOS.set_pos(pos / 1000)
+            else:
+                self.myOS.set_pos(999 / 1000)
 
         # window constructor
         self.root = Tk()
@@ -92,6 +114,24 @@ class UI:
         image = Image.open("next.png")
         image = image.resize((int(image.width / k_resize_1), int(image.height / k_resize_1)), Image.ANTIALIAS)
         next_t = ImageTk.PhotoImage(image)
+        # random
+        # active
+        image = Image.open("random.png")
+        image = image.resize((int(image.width / k_resize_1), int(image.height / k_resize_1)), Image.ANTIALIAS)
+        self.random_a = ImageTk.PhotoImage(image)
+        # inactive
+        image = Image.open("random_inactive.png")
+        image = image.resize((int(image.width / k_resize_1), int(image.height / k_resize_1)), Image.ANTIALIAS)
+        self.random_i = ImageTk.PhotoImage(image)
+        # repeat
+        # active
+        image = Image.open("repeat_active.png")
+        image = image.resize((int(image.width / k_resize_1), int(image.height / k_resize_1)), Image.ANTIALIAS)
+        self.repeat_a = ImageTk.PhotoImage(image)
+        # inactive
+        image = Image.open("repeat_inactive.png")
+        image = image.resize((int(image.width / k_resize_1), int(image.height / k_resize_1)), Image.ANTIALIAS)
+        self.repeat_i = ImageTk.PhotoImage(image)
         # buttons
         # play/pause
         self.play_b = Button(controls_box, image=self.play_i, activebackground=self.background,
@@ -102,12 +142,22 @@ class UI:
         prev_b = Button(controls_box, image=prev_t, activebackground=self.background,
                         bg=self.background, highlightthickness=0, bd=0, command=prev_track)
         prev_b.image = prev_t
-        prev_b.pack(side=LEFT, padx=0)
+        prev_b.pack(side=LEFT, padx=3)
         # next
         next_b = Button(controls_box, image=next_t, activebackground=self.background,
                         bg=self.background, highlightthickness=0, bd=0, command=next_track)
         next_b.image = next_t
-        next_b.pack(side=LEFT, padx=2)
+        next_b.pack(side=LEFT, padx=3)
+        # random
+        self.random_b = Button(controls_box, image=self.random_i, activebackground=self.background,
+                               bg=self.background, highlightthickness=0, bd=0, command=random)
+        self.random_b.image = next_t
+        self.random_b.pack(side=RIGHT, padx=3)
+        # repeat
+        self.repeat_b = Button(controls_box, image=self.repeat_i, activebackground=self.background,
+                               bg=self.background, highlightthickness=0, bd=0, command=repeat)
+        self.repeat_b.image = next_t
+        self.repeat_b.pack(side=RIGHT, padx=3)
         # labels
         names = Frame(controls_box, bg=self.background)
         names.pack(fill=X)
@@ -128,7 +178,7 @@ class UI:
                            bg=self.active_bg, highlightbackground=self.background, troughcolor=self.default_bg,
                            activebackground=self.active_bg, width=10, sliderlength=30)
         self.slide.bind("<B1-Motion>", slider_motion)
-        self.slide['to'] = 100
+        self.slide['to'] = 1000
         self.slide['from'] = 0
         self.slide.pack(side=TOP, fill=X)
 
@@ -185,15 +235,15 @@ class UI:
     def timer(self):
         # play/pause
         if not self.myOS.is_playing():
-            if self.play_b.image != self.play_i:
-                self.play_b.configure(image=self.play_i)
-                self.play_b.image = self.play_i
+            self.set_button_image(self.play_b, self.play_i)
         else:
-            if self.play_b.image != self.pause_i:
-                self.play_b.configure(image=self.pause_i)
-                self.play_b.image = self.pause_i
+            self.set_button_image(self.play_b, self.pause_i)
         self.time_now.configure(text=self.myOS.get_time())
-        self.slide.set(self.myOS.player.get_position()*100)
+        self.slide.set(self.myOS.get_percent_pos())
+        self.myOS.sequencer(random=self.random, repeat=self.repeat)
+        if self.myOS.track_changed:
+            self.track_changed(self.myOS.index)
+            self._set_track(self.myOS.index)
         # start timer
         threading.Timer(0.1, self.timer).start()
 
@@ -205,7 +255,7 @@ class UI:
         listbox.activate(index)
         listbox.selection_anchor(index)
 
-    def set_track(self, index):
+    def _set_track(self, index):
         self.set_element_listbox(index, self.tracksList)
         self.num_track = index
 
@@ -242,11 +292,16 @@ class UI:
         if self.tracksList.size() == 0:
             self.tracksList.insert(END, "       nothing        ")
 
+    @staticmethod
+    def set_button_image(button: Button, image: ImageTk):
+        if button.image != image:
+            button.configure(image=image)
+            button.image = image
+
     def track_changed(self, index):
         self._set_element_duration(index)
         # labels set
         self.time_end.configure(text=self.myOS.get_length(index))
-        print(self.myOS.get_author_and_title(index))
         self.track_name.configure(text=self.myOS.get_author_and_title(index)[1])
         self.author_name.configure(text=self.myOS.get_author_and_title(index)[0])
 
@@ -256,6 +311,10 @@ class OS:
     dirs = [""]
     tracks = [""]
     album = ""
+    random = False
+    repeat = False
+    index = 0
+    track_changed = False
 
     def __init__(self, path_d):
         self.path = path_d
@@ -278,7 +337,6 @@ class OS:
         self.tracks.sort(key=self._get_num)
         for album in setting0:
             if self.album == album:
-                print(self.tracks)
                 self.tracks.reverse()
 
     def get_tracks(self):
@@ -350,6 +408,7 @@ class OS:
         media = vlc.Media(path_t)
         self.player.set_media(media)
         self.player.play()
+        self.index = index
 
     def play_pause(self):
         self.player.pause()
@@ -359,6 +418,37 @@ class OS:
 
     def is_playing(self):
         return self.player.is_playing()
+
+    def get_percent_pos(self):
+        return self.player.get_position()*1000
+
+    def sequencer(self, random, repeat):
+        if self.player.can_pause() and (not self.player.is_playing()) and (not self.player.will_play()):
+            self.next_track(repeat=repeat, random=random)
+
+    def next_track(self, random, repeat):
+        if repeat:
+            self.set_pos(0)
+            self.play(self.index)
+        else:
+            self.index += 1
+            if self.index >= len(self.tracks):
+                self.index = 0
+            self.track_changed = True
+            self.set_pos(0)
+            self.play(self.index)
+
+    def prev_track(self, random, repeat):
+        if repeat:
+            self.set_pos(0)
+            self.play(self.index)
+        else:
+            self.index -= 1
+            if self.index <= 0:
+                self.index = len(self.tracks)
+            self.track_changed = True
+            self.set_pos(0)
+            self.play(self.index)
 
 
 myOS = OS("/media/vasia/HDD1TB/music1")
