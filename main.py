@@ -354,6 +354,7 @@ class OS:
     _random = False
     _index = 0
     _track_changed_bool = False
+    _album_playing = ""
 
     def __init__(self, path_d):
         self.path = path_d
@@ -380,6 +381,8 @@ class OS:
         for album in setting0:
             if self._album == album:
                 self._tracks.reverse()
+        if self._album_playing == self._album:
+            self._track_changed_bool = True
 
     def get_tracks(self):
         return self._tracks
@@ -451,6 +454,7 @@ class OS:
         self.player.set_media(media)
         self.player.play()
         self._index = index
+        self._album_playing = self._album
 
     def play_pause(self):
         self.player.pause()
