@@ -282,15 +282,20 @@ class UI:
         if self.albumsList.size() == 0:
             self.albumsList.insert(END, "       nothing        ")
 
-    def update_tracks(self):
-        self.tracksList.delete(0, 'end')
+    def update_duration(self):
         self.tracksList_duration.delete(0, 'end')
         for i in range(len(self.myOS.get_tracks())):
-            self.tracksList_duration.insert(END, self.myOS.get_length(i))
-            # str
+            self.tracksList_duration.insert(i, self.myOS.get_length(i))
+
+    def update_tracks(self):
+        self.tracksList.delete(0, 'end')
+        for i in range(len(self.myOS.get_tracks())):
             self.tracksList.insert(END, self.myOS.get_name(i))
         if self.tracksList.size() == 0:
             self.tracksList.insert(END, "       nothing        ")
+        # duration thread start
+        x = threading.Thread(target=self.update_duration, args=())
+        x.start()
 
     @staticmethod
     def set_button_image(button: Button, image: ImageTk):
