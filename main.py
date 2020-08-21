@@ -76,10 +76,13 @@ class UI:
                 self.myOS.set_pos(999 / 1000)
 
         def in_label(event):
-            text = self.search.get() + event.char
+            if event.char == '\b':
+                text = self.search.get()
+                text = text[0:len(text)-1]
+            else:
+                text = self.search.get() + event.char
             self.myOS.find(text)
             self.update_tracks()
-            print(text)
 
         # window constructor
         self.root = Tk()
@@ -342,6 +345,7 @@ class UI:
 
 
 class OS:
+    _track_now = ''
     _path = ""
     _dirs = []
     _tracks = []
@@ -527,15 +531,24 @@ class OS:
                 lst.insert(0, lst.pop())
 
     def find(self, string):
+        index = -1
+        if self._index != -1:
+            self._track_now = self._tracks[self._index]
         self._tracks = []
         path_d = os.path.join(self.path, self._album)
         for track in os.listdir(path_d):
-            if self._get_ext(track) == "mp3" and ((track.find(string) != -1) or string.isspace()):
+            if self._get_ext(track) == "mp3" and ((track.lower().find(string.lower()) != -1) or string.isspace()):
                 self._tracks.append(track)
         self._tracks.sort(key=self._get_num)
         for album in setting0:
             if self._album == album:
                 self._tracks.reverse()
+        for i in range(len(self._tracks)):
+            if self._track_now == self._tracks[i]:
+                index = i
+        self._index = index
+        if self._index != -1:
+            self._track_changed_bool = True
 
 
 myOS = OS("/media/vasia/HDD1TB/music1")
