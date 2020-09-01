@@ -23,7 +23,6 @@ class UI:
     default_bg = "#ad4500"
     height_w = 750
     width_w = 700
-    num_track = 0
     random = False
     repeat = False
 
@@ -290,7 +289,6 @@ class UI:
 
     def _set_track(self, index):
         self.set_element_listbox(index, self.tracksList)
-        self.num_track = index
 
     def _set_element_duration(self, index):
         self.set_element_listbox(index, self.tracksList_duration)
