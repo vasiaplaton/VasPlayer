@@ -87,6 +87,12 @@ class UI:
         self.root = Tk()
         self.root.geometry('700x750')
         self.root.config(bg=self.background)
+        # icon
+        ico = Image.open('music.png')
+        photo = ImageTk.PhotoImage(ico)
+        self.root.wm_iconphoto(False, photo)
+        # title
+        self.root.title("VasPlayer")
         # album box(colon)
         albums_colon = Frame(self.root, bg=self.background)
         albums_colon.pack(side=LEFT, fill=Y)
@@ -507,7 +513,7 @@ class OS:
             self.next_track(repeat=0)
         if str(key) == '<269025046>':
             self.prev_track(repeat=0)
-        if str(key) == '<269025044>' or str(key) == '<269025043>':
+        if str(key) == '<269025044>' or str(key) == '<269025073>':
             self.play_pause()
 
     def random_shuffle(self):
