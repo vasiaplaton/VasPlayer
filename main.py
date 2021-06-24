@@ -7,6 +7,7 @@ import os
 import threading
 import random as random_module
 from pynput.keyboard import Listener
+import signal
 
 _path = "."
 setting0 = ["Музыка Василия Платона"]
@@ -28,8 +29,8 @@ class UI:
 
     def __init__(self, os_get):
         self.myOS = os_get
-
         # commands
+
         def play_pause():
             self.myOS.play_pause()
 
@@ -265,7 +266,11 @@ class UI:
         # album set
         self._set_album(0)
         # timer start
-        self.timer()
+        self.timer_thread = threading.Timer(0.1, self.timer)
+        self.timer_thread.start()
+        # prepare for close
+        self._prepare_for_close(self.myOS.__del__)
+        self.update_duration_thread = None
 
     def loop_start(self):
         self.root.mainloop()
@@ -283,7 +288,8 @@ class UI:
             self.track_changed(self.myOS.get_index())
             self._set_track(self.myOS.get_index())
         # start timer
-        threading.Timer(0.1, self.timer).start()
+        self.timer_thread = threading.Timer(0.1, self.timer)
+        self.timer_thread.start()
 
     @staticmethod
     def set_element_listbox(index, listbox):
@@ -322,7 +328,10 @@ class UI:
     def update_duration(self):
         self.tracksList_duration.delete(0, 'end')
         for i in range(len(self.myOS.get_tracks())):
-            self.tracksList_duration.insert(i, self.myOS.get_length(i))
+            try:
+                self.tracksList_duration.insert(i, self.myOS.get_length(i))
+            except IndexError:
+                pass
 
     def update_tracks(self):
         self.tracksList.delete(0, 'end')
@@ -331,7 +340,7 @@ class UI:
         if self.tracksList.size() == 0:
             self.tracksList.insert(END, "       nothing        ")
         # duration thread start
-        x = threading.Thread(target=self.update_duration, args=())
+        x = threading.Thread(target=self.update_duration, args=(), daemon=True)
         x.start()
 
     @staticmethod
@@ -346,6 +355,31 @@ class UI:
         self.time_end.configure(text=self.myOS.get_length(index))
         self.track_name.configure(text=self.myOS.get_author_and_title(index)[1])
         self.author_name.configure(text=self.myOS.get_author_and_title(index)[0])
+
+    def _prepare_for_close(self, execute_on_close):
+        # on window close
+        self.root.protocol("WM_DELETE_WINDOW", self._on_closing)
+
+        # sigkill close
+
+        def sigkill_handler(_sig, _frame):
+            self._on_closing()
+
+        signal.signal(signal.SIGINT, sigkill_handler)
+        # external function that executed on close
+        self.execute_on_close = execute_on_close
+
+    def _on_closing(self):
+        print("window closed")
+        self.__del__()
+        self.execute_on_close()
+
+    def __del__(self):
+        self.timer_thread.cancel()
+        try:
+            self.root.destroy()
+        except TclError:
+            print("already destroyed")
 
 
 class OS:
@@ -557,6 +591,9 @@ class OS:
         self._index = index
         if self._index != -1:
             self._track_changed_bool = True
+
+    def __del__(self):
+        self.player.release()
 
 
 myOS = OS("/media/vasia/HDD1TB/music1")
